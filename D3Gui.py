@@ -5,7 +5,7 @@
 # Name:         D3Gui.py
 # Author:       Xilyfe
 # Date:         2023/1/2
-# Description:  
+# Description:
 # -------------------------------------------------------------------------------
 import sys
 import pygame
@@ -95,6 +95,9 @@ class ExecDraw():
             return Width / 2, Height / 2, True
         else:
             return (Width - 2) / 2, (Height - 39) / 2, False
+
+    def clear(self):
+        pygame.quit()
 
     def startLoop(self):
         '''

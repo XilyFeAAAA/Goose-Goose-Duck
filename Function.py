@@ -13,6 +13,8 @@ from Struct import RECT
 from Libs import WINDOWS_LIBRARY
 
 init_Library = WINDOWS_LIBRARY()
+
+
 def FindWindowPid(className, windowName):
     '''
     :func: 通过窗口取进程id
@@ -24,6 +26,8 @@ def FindWindowPid(className, windowName):
     pid = ctypes.wintypes.DWORD()
     thre = init_Library.getThreadProcessId(hwnd, ctypes.byref(pid))
     return (hwnd, thre, pid.value)
+
+
 def GetWinRect(hwnd):
     '''
     :func: 通过句柄去窗口大小
@@ -38,6 +42,7 @@ def GetWinRect(hwnd):
         rect = ctypes.wintypes.RECT()
         f(ctypes.wintypes.HWND(hwnd), ctypes.wintypes.DWORD(9), ctypes.byref(rect), ctypes.sizeof(rect))
         return rect.left, rect.top, rect.right, rect.bottom
+
 
 class WinTool():
     def __init__(self, name):
