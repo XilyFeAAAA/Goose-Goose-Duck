@@ -21,7 +21,7 @@ class Player:
         """
         self.player_num = player_num
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3D97140,
+                                                           + 0x3BD48B0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         self.Unity_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('UnityPlayer.dll')
                                                     + 0x01ACA7C0, offsets=[0x48, 0x370, 0x10, 0x60, 0x2C])
@@ -31,12 +31,15 @@ class Player:
         self.color = (255, 255, 0)  # 绘制颜色
         self.eaten = None  # 被吃
         self.isGhost = None  # 灵魂
+        self.isInfected = None  # 感染
         self.isSpectator = None  # 观战
         self.killRound = None  # 这轮是否杀人
         self.has_Bomb = None  # 身上有无炸弹
         self.nickname = ""  # 用户名
         self.die_flag = False  # 判断是不是刚刚死
-        self.in_flag = True  # 用来判断用户是不是刚刚离开
+        self.infect_flag = False  # 判断是不是刚刚感染
+        self.in_flag = False  # 用来判断用户是不是刚刚离开
+        self.eaten_flag = False
 
     def GetNickName(self):
         """
@@ -46,7 +49,7 @@ class Player:
         name = ""
         try:
             nickname_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                      + 0x3D97140,
+                                                      + 0x3BD48B0,
                                                       offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0x1D0,
                                                                0])
             lens = wintool.Game.read_int(nickname_addr + 0x10)
@@ -55,27 +58,30 @@ class Player:
                 name += chr(int(name_hex[i + 2:i + 4] + name_hex[i:i + 2], 16))
             self.nickname = name
         except:
-            print("名字获取错误")
+            self.valid = False
 
     def update(self):
         self.valid = wintool.Game.read_int(self.Unity_addr + self.player_num * 0xE0 - 0x28) == 58  # 58则是有人
         if self.valid:
             try:
-                if self.in_flag:  # key为真，则刚刚加入，初始化名字
+                if not self.in_flag:  # key为真，则刚刚加入，初始化名字
                     self.GetNickName()
-                    self.in_flag = False
+                    self.in_flag = True
                     # print(f"用户{self.nickname} 加入")
+                #print(self.player_num)
                 self.x = wintool.Game.read_float(self.GameAssembly_addr + 0x2C8)
                 self.y = wintool.Game.read_float(self.GameAssembly_addr + 0x2C8 + 0x4)
+                self.eaten = wintool.Game.read_int(self.GameAssembly_addr +0x394)
                 self.isGhost = wintool.Game.read_int(self.GameAssembly_addr + 0x188)
+                self.isInfected = wintool.Game.read_int(self.GameAssembly_addr + 0xC3)
                 self.isSpectator = wintool.Game.read_int(self.GameAssembly_addr + 0x37A)
                 self.killRound = wintool.Game.read_int(self.GameAssembly_addr + 0x2EC)
                 self.has_Bomb = wintool.Game.read_int(self.GameAssembly_addr + 0x134)
-                # print(f"序号:{self.player_num} 名字{self.nickname} 幽灵{self.isGhost} 旁观{self.isSpectator} 杀人{self.killRound}\n x{self.x} y{self.y}")
+                #print(f"序号:{self.player_num} 名字{self.nickname} 幽灵{self.isGhost} ")
             except:
-                print(f"序号{self.player_num} 读取错误")
+                pass
         elif not self.in_flag:
-            self.in_flag = True  # 退出key为True
+            self.in_flag = False  # 退出key为True
             # print(f"用户{self.nickname} 退出")
 
 
@@ -90,6 +96,7 @@ class Application(Frame):
         self.player_list = []
         self.draw = ExecDraw(FindWindowPid(None, "Goose Goose Duck")[0])  # 启动PyGame
         self.board = []  # 信息列表
+        self.infect_num = 0  # 被感染人数
         self.draw_state = BooleanVar(False)  # PyGame绘制标志
         self.cd_state = BooleanVar(False)  # CD标志
         self.speed = 5.0  # 人物速度
@@ -97,7 +104,6 @@ class Application(Frame):
         self.record_state = BooleanVar(False)  # 记录信息标志
         self.mist_state = IntVar(value=1)  # 迷雾标志
         self.color = (255, 51, 0)  # 绘制颜色
-        self.die_flag = False  # 记录是否刚刚死亡
         ###
         Button(self.master, text="TP", width=8, command=self.TP, bg="white").place(x=80, y=160)
         self.combobox = ttk.Combobox(self.master, state="readonly", width=7, postcommand=self.ChangeCombobox)
@@ -134,10 +140,13 @@ class Application(Frame):
         func: 复写无cd
         :return:
         """
+        cd_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                 + 0x3D690C0,
+                                                 offsets=[0x1580, 0x20, 0x150, 0x28, 0x70])
         while self.cd_state.get():
             # 读内存比写内存占用小
-            if wintool.Game.read_float(self.cd_addr) != 0:
-                wintool.Game.write_float(self.cd_addr, 0.0)
+            if wintool.Game.read_float(cd_addr) != 0:
+                wintool.Game.write_float(cd_addr, 0.0)
 
     def ChangeCombobox(self):
         """
@@ -178,7 +187,7 @@ class Application(Frame):
         """
         self.Update_screen()  # 更新屏幕信息
         for player in self.player_list:
-            if player == self.player_list[0] or not player.valid or player.isSpectator:  # 人物无效(观战、幽灵)则跳过
+            if player == self.player_list[0] or not player.valid or player.isSpectator or player.eaten:  # 人物无效(观战、被吃)则跳过
                 continue
             d_x, d_y = self.times * (player.x - self.player_list[0].x), self.times * (player.y - self.player_list[0].y)
             self.draw.drawText(player.nickname, 18, self.p_x + d_x, self.p_y - d_y - 20, player.color)
@@ -186,7 +195,7 @@ class Application(Frame):
                                self.box_width, self.box_height, 1, player.color)  # 绘制人物方框
             self.draw.drawLine(self.p_x, self.p_y, self.p_x + d_x, self.p_y - d_y, 1, player.color)  # 绘制人物连线
 
-    def Die_info_output(self):
+    def Info_output(self):
         """
         func: 死亡信息输出
         :return:
@@ -194,17 +203,31 @@ class Application(Frame):
         for i in self.player_list:
             if i.valid:
                 if i.isGhost and not i.die_flag:  # 刚刚死
+                    print("die")
                     i.color = (128, 128, 128)
                     i.die_flag = True
                     distance_list = []
                     for j in self.player_list:
-                        if not (j.isGhost and j.isSpectator) and j.valid and i != j:
+                        if not (j.isGhost or j.isSpectator or j.eaten) and j.valid and i != j:
                             distance_list.append((self.Calculation(i.x, i.y, j.x, j.y), j.nickname))
                     distance_list.sort(key=lambda x: x[0])
                     self.board.append(
                         f"玩家:{i.nickname}死亡, 附近有{distance_list[0][1]}{round(distance_list[0][0], 2)}米, {distance_list[1][1]}{round(distance_list[1][0], 2)}米")
+                elif i.eaten and not i.eaten_flag:  # 刚刚被吃
+                    i.eaten_flag = True
+                    distance_list = []
+                    for j in self.player_list:
+                        if not (j.isGhost or j.isSpectator or j.eaten) and j.valid and i != j:
+                            distance_list.append((self.Calculation(i.x, i.y, j.x, j.y), j.nickname))
+                    distance_list.sort(key=lambda x: x[0])
+                    self.board.append(
+                        f"玩家:{i.nickname}被吃, 附近有{distance_list[0][1]}{round(distance_list[0][0], 2)}米")
+                elif i.isInfected and not i.infect_flag:  # 刚刚被感染
+                    self.infect_num += 1
+                    self.board.append(f"玩家:{i.nickname}被感染，总计{self.infect_num}人")
+                    i.infect_flag = True
         for i in range(len(self.board)):
-            self.draw.drawText(self.board[i], 14, 0, i * 18 + 150, (255, 255, 0))
+            self.draw.drawText(self.board[i], 14, 0, i * 18 + 100, (255, 255, 0))
 
     def Calculation(self, x1, y1, x2, y2):
         """
@@ -235,12 +258,13 @@ class Application(Frame):
         func: pygame主循环
         :return:
         """
+        #print(len(self.player_list))
         while True:
             for player in self.player_list:
                 player.update()  # 更新人物信息
             self.draw.startLoop()
             self.draw.drawText("请在进入游戏后按F2初始化游戏", 16, 5, 40, (255, 255, 0))
-            if self.record_state.get(): self.Die_info_output()  # 信息记录
+            if self.record_state.get(): self.Info_output()  # 信息记录
             if self.draw_state.get():  self.Update()  # 绘制
             self.draw.endLoop()
 
@@ -249,19 +273,17 @@ class Application(Frame):
         if key == keyboard.Key.f2:
             try:
                 self.through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                              + 0x3D97140,
+                                                              + 0x3BD48B0,
                                                               offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
                 self.mist_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3D97140,
+                                                           + 0x3BD48B0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x379])
                 self.speed_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3D69DF0,
+                                                           + 0x3BA7B38,
                                                            offsets=[0xb8, 0x0, 0x0, 0xb8, 0x10])
-                self.cd_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3D690C0,
-                                                           offsets=[0x1580,0x20, 0x150, 0x28, 0x70])
+                print("init")
                 self.player_list = [Player(i) for i in range(16)]
-                self.die_flag = False
+                self.infect_num = 0
                 self.board.clear()
             except Exception as e:
                 messagebox.showwarning(message="请在进入游戏后按F2初始化")
