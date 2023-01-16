@@ -13,7 +13,8 @@ import ctypes
 import win32gui
 import win32api
 import win32con
-from Function import GetWinRect,FindWindowPid,init_Library
+from Function import GetWinRect, FindWindowPid, init_Library
+
 
 class ExecDraw():
     def __init__(self, hwnd):
@@ -45,7 +46,7 @@ class ExecDraw():
         '''
         textFont = pygame.font.SysFont('simhei', size)
         text_fmt = textFont.render(text, True, color)
-        self.screen.blit(text_fmt,(x,y))
+        self.screen.blit(text_fmt, (x, y))
 
     def drawRect(self, x, y, width, height, c, color):
         '''
@@ -60,7 +61,7 @@ class ExecDraw():
         '''
         pygame.draw.rect(self.screen, color, (x, y, width, height), c)
 
-    def drawLine(self,startX,startY, endX, endY, width, color):
+    def drawLine(self, startX, startY, endX, endY, width, color):
         '''
         :func: 绘制直线
         :param startX: 开始x坐标
@@ -71,9 +72,9 @@ class ExecDraw():
         :param color: RGB 颜色
         :return:
         '''
-        pygame.draw.line(self.screen, color, (startX,startY),(endX,endY), width)
+        pygame.draw.line(self.screen, color, (startX, startY), (endX, endY), width)
 
-    def drawCircle(self,x, y, c, color):
+    def drawCircle(self, x, y, c, color):
         '''
         :func: 绘制圆
         :param x: 横坐标
@@ -100,10 +101,10 @@ class ExecDraw():
         pygame.quit()
 
     def startLoop(self):
-        '''
+        """
         :func: 开始 (必须)
         :return:
-        '''
+        """
         pygame.time.Clock().tick(30)
         self.screen.fill((0, 0, 0))
         left, top, right, bottom = GetWinRect(self.firstHwnd)
