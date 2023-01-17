@@ -22,7 +22,7 @@ class Player:
         self.Unity_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('UnityPlayer.dll')
                                                     + 0x01ACA7C0, offsets=[0x48, 0x370, 0x10, 0x60, 0x2C])
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3BD48B0,
+                                                           + 0x3CA6AC0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         self.valid = True  # 是否有效
         self.x = None  # x
@@ -48,7 +48,7 @@ class Player:
         """
         time.sleep(4)
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3BD48B0,
+                                                           + 0x3CA6AC0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         self.Update()
 
@@ -61,7 +61,7 @@ class Player:
         name = ""
         try:
             nickname_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                      + 0x3BD48B0,
+                                                      + 0x3CA6AC0,
                                                       offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0x1D0,
                                                                0])
             lens = wintool.Game.read_int(nickname_addr + 0x10)
@@ -302,10 +302,10 @@ class Application(Frame):
         if key == keyboard.Key.f2:
             try:
                 self.through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                              + 0x3BD48B0,
+                                                              + 0x3CA6AC0,
                                                               offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
                 self.mist_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3BD48B0,
+                                                           + 0x3CA6AC0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x379])
                 self.speed_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
                                                             + 0x3BA7B38,
