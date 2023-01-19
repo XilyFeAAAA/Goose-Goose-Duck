@@ -2,15 +2,23 @@
 import math
 import threading
 import time
-from typing import Union, Any
+import os
+import pymem.exception
 from D3Gui import ExecDraw
 from Function import WinTool, GetWinRect, FindWindowPid
 from tkinter import *
 from tkinter import ttk, messagebox
 from pynput import keyboard
 
-wintool = WinTool("goose goose duck")
-
+while True:
+    try:
+        wintool = WinTool("goose goose duck")
+        break
+    except pymem.exception.ProcessNotFound:
+        time.sleep(5)
+    except pymem.exception.CouldNotOpenProcess:
+        print("请以管理员身份运行")
+        os._exit(0)
 
 class Player:
     def __init__(self, player_num: int):
@@ -24,7 +32,7 @@ class Player:
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
                                                            + 0x3CA6AC0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
-        self.valid = True  # 是否有效
+        self.valid = False  # 是否有效
         self.x = None  # x
         self.y = None  # y
         self.color = (255, 255, 0)  # 绘制颜色
@@ -46,12 +54,11 @@ class Player:
         func: 等待4秒后监听，重新尝试
         :return:
         """
-        time.sleep(4)
+        time.sleep(5)
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
                                                            + 0x3CA6AC0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
-        self.Update()
-
+        if app.inGame: self.Update()
 
     def GetNickName(self):
         """
@@ -70,7 +77,8 @@ class Player:
                 name += chr(int(name_hex[i + 2:i + 4] + name_hex[i:i + 2], 16))
             self.nickname = name
         except:
-            print("名字获取错误")
+            pass
+            #print(f"[{self.player_num}]名字获取错误")
 
 
     def Update(self):
@@ -95,14 +103,12 @@ class Player:
                 self.in_flag = True
                 #print(f"用户{self.nickname} 加入")
             #print(f"序号:{self.player_num} 名字{self.nickname} 幽灵{self.isGhost} 旁观{self.isSpectator} 杀人{self.killRound}\n x{self.x} y{self.y}")
-        except:
-            #print(f"玩家{self.player_num}搜索错误，4秒后重新加载")
+        except pymem.exception.MemoryReadError:
+            print(f"玩家{self.player_num}搜索错误，4秒后重新加载")
             self.valid = False
             self.wait_update = True  # 进入等待更新
             self.in_flag = False  # 退出key为True
             threading.Thread(target=self.CheckStatus).start()
-
-
 
 class Application(Frame):
     def __init__(self, master):
@@ -112,7 +118,7 @@ class Application(Frame):
         self.master.config(bg='white')
         self.master.protocol('WM_DELETE_WINDOW', self._Destory)
         self.master.attributes('-topmost', True)
-        self.master.attributes("-alpha", 0.7)
+        self.master.attributes("-alpha", 0.8)
         ###
         self.player_list = []
         self.draw = ExecDraw(FindWindowPid(None, "Goose Goose Duck")[0])  # 启动PyGame
@@ -120,18 +126,25 @@ class Application(Frame):
         self.infect_num = 0  # 被感染人数
         self.draw_state = BooleanVar(False)  # PyGame绘制标志
         self.cd_state = BooleanVar(False)  # CD标志
-        self.speed = 5.0  # 人物速度
+        self.speed = DoubleVar(value=5.0)
         self.through_state = IntVar(value=1)  # 穿墙状态
         self.record_state = BooleanVar(False)  # 记录信息标志
         self.mist_state = IntVar(value=1)  # 迷雾标志
         self.color = (255, 51, 0)  # 绘制颜色
         ###
+        self.lobby_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                    + 0x3C78BC8, offsets=[0xb8, 0x8])
+        self.inGame = False  # 是否在游戏
+        ###
+        ttk.Separator(self.master, orient=HORIZONTAL).place(x=0, y=19, relwidth=150)
+        Scale(self.master, from_=5.0, to=15.0, variable=self.speed, length=150, resolution=1.0 ,orient=HORIZONTAL,
+              command=self.ChangeSpeed).place(x=0, y=125)
         self.btn_label = Label(self.master, text="▼", font=("Arial",12),background="white")
         self.btn_label.place(x=120, y=-5)
         self.btn_label.bind("<Button-1>", self.Stretch)
-        Button(self.master, text="TP", width=8, command=self.TP, bg="white").place(x=80, y=160)
+        Button(self.master, text="TP", width=8, command=self.TP, bg="white").place(x=80, y=168)
         self.combobox = ttk.Combobox(self.master, state="readonly", width=7, postcommand=self.ChangeCombobox)
-        self.combobox.place(x=1, y=165)
+        self.combobox.place(x=1, y=173)
         Checkbutton(
             self.master, text="无迷雾", background="white", activebackground="white", font=("Arial", 10),
             onvalue=0, offvalue=1, variable=self.mist_state, command=self.Mist).place(x=0, y=20)
@@ -148,7 +161,7 @@ class Application(Frame):
         Checkbutton(
             self.master, text="穿墙", background="white", activebackground="white", font=("Arial", 10),
             onvalue=0, offvalue=1, variable=self.through_state, command=self.Through).place(x=0, y=100)
-
+        threading.Thread(target=self.Monitor_Thread, daemon=True).start()  # 开始监控线程
         threading.Thread(target=self.Pygame_Thread, daemon=True).start()  # 开始PyGame线程
         self.listen_key_nblock()  # 开始键盘监听
 
@@ -157,25 +170,34 @@ class Application(Frame):
             self.master.geometry('150x200+100+100')
         else:
             self.master.geometry('150x20+100+100')
+
     def Mist(self):
         """
         func：除迷雾
         :return:
         """
-        wintool.Game.write_bytes(self.mist_addr, self.mist_state.get())
+        try:
+            mist_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                       + 0x3CA6AC0,
+                                                       offsets=[0xb8, 0x20, 0x18, 0x30, 0x379])
+            wintool.Game.write_int(mist_addr, self.mist_state.get())
+        except:
+            messagebox.showerror(message="请检查是否进入游戏")
+            self.mist_state.set(1)
 
     def Cd_Rewrite(self):
         """
         func: 复写无cd
         :return:
         """
-        cd_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                            + 0x3D690C0,
-                                            offsets=[0x1580, 0x20, 0x150, 0x28, 0x70])
-        while self.cd_state.get():
-            # 读内存比写内存占用小
-            if wintool.Game.read_float(cd_addr) != 0:
-                wintool.Game.write_float(cd_addr, 0.0)
+        messagebox.showwarning(message="cd待完善")
+        # cd_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+        #                                     + 0x3D690C0,
+        #                                     offsets=[0x1580, 0x20, 0x150, 0x28, 0x70])
+        # while self.cd_state.get():
+        #     # 读内存比写内存占用小
+        #     if wintool.Game.read_float(cd_addr) != 0:
+        #         wintool.Game.write_float(cd_addr, 0.0)
 
     def ChangeCombobox(self):
         """
@@ -220,10 +242,10 @@ class Application(Frame):
                 continue
             #print(f"[{player.player_num}] {player.nickname} {player.x} {player.y}")
             d_x, d_y = self.times * (player.x - self.player_list[0].x), self.times * (player.y - self.player_list[0].y)
-            self.draw.drawText(player.nickname, 18, self.p_x + d_x, self.p_y - d_y - 20, player.color)
             self.draw.drawRect(self.p_x + d_x, self.p_y - d_y,
                                self.box_width, self.box_height, 1, player.color)  # 绘制人物方框
             self.draw.drawLine(self.p_x, self.p_y, self.p_x + d_x, self.p_y - d_y, 1, player.color)  # 绘制人物连线
+            self.draw.drawText(player.nickname, 18, self.p_x + d_x, self.p_y - d_y - 20, player.color)
 
     def Info_output(self):
         """
@@ -280,7 +302,22 @@ class Application(Frame):
         func: 穿墙
         :return:
         """
-        wintool.Game.write_int(self.through_addr, self.through_state.get())
+        try:
+            through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                          + 0x3CA6AC0,
+                                                          offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
+
+            wintool.Game.write_int(through_addr, self.through_state.get())
+        except:
+            messagebox.showerror(message="请检查是否进入游戏")
+            self.through_state.set(1)
+
+    def ChangeSpeed(self, value):
+        speed_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                    + 0x3C79808,
+                                                    offsets=[0xb8, 0x0, 0x0, 0xb8, 0x10])
+        print(self.speed.get())
+        wintool.Game.write_float(speed_addr, self.speed.get())
 
     def Pygame_Thread(self):
         """
@@ -292,38 +329,38 @@ class Application(Frame):
                 if not player.wait_update:
                     player.Update()  # 更新人物信息
             self.draw.startLoop()
-            self.draw.drawText("请在进入游戏后按F2初始化游戏", 16, 5, 40, (255, 255, 0))
+            self.draw.drawText("请在每局游戏开始按F2初始化", 16, 5, 40, (255, 255, 0))
             if self.record_state.get(): self.Info_output()  # 信息记录
             if self.draw_state.get():  self.Update()  # 绘制
             self.draw.endLoop()
+
+    def Monitor_Thread(self):
+        while True:
+            state = wintool.Game.read_int(self.lobby_addr)
+            if state and not self.inGame:  # 刚刚进房间
+                self.inGame = True
+                self.Reset()
+                print("游戏开始")
+            elif not state and self.inGame:  # 刚刚退出
+                self.inGame = False
+                self.record_state.set(False)
+                self.draw_state.set(False)
+                self.player_list = []
+                print("游戏结束")
+            time.sleep(4)
+
+    def Reset(self):
+        self.player_list = [Player(i) for i in range(16)]
+        self.infect_num = 0
+        self.board.clear()
 
     def on_press(self, key):
         """定义按下时候的响应，参数传入key"""
         if key == keyboard.Key.f2:
             try:
-                self.through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                              + 0x3CA6AC0,
-                                                              offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
-                self.mist_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3CA6AC0,
-                                                           offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x379])
-                self.speed_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                            + 0x3BA7B38,
-                                                            offsets=[0xb8, 0x0, 0x0, 0xb8, 0x10])
-                self.player_list = [Player(i) for i in range(16)]
-                self.infect_num = 0
-                self.board.clear()
-            except Exception as e:
-                print(e)
+                self.Reset()  # 重置
+            except:
                 messagebox.showwarning(message="请在进入游戏后按F2初始化")
-
-        elif key == keyboard.Key.page_up:
-            self.speed += 1
-            wintool.Game.write_float(self.speed_addr, self.speed)
-
-        elif key == keyboard.Key.page_down:
-            self.speed = max(5.0, self.speed - 1.0)
-            wintool.Game.write_float(self.speed_addr, self.speed)
 
     def listen_key_nblock(self):
         """
