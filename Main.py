@@ -17,7 +17,7 @@ while True:
     except pymem.exception.ProcessNotFound:
         time.sleep(5)
     except pymem.exception.CouldNotOpenProcess:
-        print("请以管理员身份运行")
+        messagebox.showerror(message="请以管理员身份运行")
         os._exit(0)
 
 class Player:

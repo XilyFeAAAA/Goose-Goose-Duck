@@ -30,10 +30,9 @@ class ExecDraw():
         self.hwnd = FindWindowPid('pygame', 'D3Gui')[0]
         win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, left, top, self.Width, self.Height, win32con.SWP_NOSIZE)
         ctypes.windll.user32.SetWindowLongA(self.hwnd, win32con.GWL_EXSTYLE,
-                                            win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT)  # 设置窗口穿透
+                                            win32con.WS_EX_LAYERED | win32con.WS_EX_TRANSPARENT | win32con.WS_EX_TOOLWINDOW)  # 设置窗口穿透
         flag = ctypes.windll.user32.SetLayeredWindowAttributes(self.hwnd, 0, 0, 1)
         pygame.display.flip()
-
     def drawText(self, text, size, x, y, color):
         '''
         :func: 绘制文字

@@ -9,11 +9,17 @@
 import pymem
 import ctypes
 from pymem.ptypes import RemotePointer
-from Struct import RECT
 from Libs import WINDOWS_LIBRARY
 
 init_Library = WINDOWS_LIBRARY()
 
+
+class RECT(ctypes.Structure):
+    _fields_ = [
+        ('Left', ctypes.c_long),
+        ('Top', ctypes.c_long),
+        ('Right', ctypes.c_long),
+        ('Bottom', ctypes.c_long)]
 
 def FindWindowPid(className, windowName):
     '''
