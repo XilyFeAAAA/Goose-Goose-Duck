@@ -4,21 +4,28 @@ import threading
 import time
 import os
 import pymem.exception
+import win32api, win32con
 from D3Gui import ExecDraw
 from Function import WinTool, GetWinRect, FindWindowPid
 from tkinter import *
 from tkinter import ttk, messagebox
 from pynput import keyboard
 
-while True:
+countdown = 3
+while countdown:
     try:
         wintool = WinTool("goose goose duck")
         break
     except pymem.exception.ProcessNotFound:
         time.sleep(5)
+        countdown -=1
     except pymem.exception.CouldNotOpenProcess:
-        messagebox.showerror(message="请以管理员身份运行")
+        win32api.MessageBox(0, "请以管理员身份运行", "Goose Goose Duck辅助", win32con.MB_OK)
         os._exit(0)
+
+if not countdown:
+    win32api.MessageBox(0, "未找到游戏，程序退出", "Goose Goose Duck辅助", win32con.MB_OK)
+    os._exit(0)
 
 class Player:
     def __init__(self, player_num: int):
@@ -29,9 +36,11 @@ class Player:
         self.player_num = player_num
         self.Unity_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('UnityPlayer.dll')
                                                     + 0x01ACA7C0, offsets=[0x48, 0x370, 0x10, 0x60, 0x2C])
-        self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3CA6AC0,
-                                                           offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
+        try:
+            self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                           + 0x3CA6AC0, offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
+        except:
+            self.GameAssembly_addr = 0
         self.valid = False  # 是否有效
         self.x = None  # x
         self.y = None  # y
@@ -104,7 +113,7 @@ class Player:
                 #print(f"用户{self.nickname} 加入")
             #print(f"序号:{self.player_num} 名字{self.nickname} 幽灵{self.isGhost} 旁观{self.isSpectator} 杀人{self.killRound}\n x{self.x} y{self.y}")
         except pymem.exception.MemoryReadError:
-            print(f"玩家{self.player_num}搜索错误，4秒后重新加载")
+            #print(f"玩家{self.player_num}搜索错误，4秒后重新加载")
             self.valid = False
             self.wait_update = True  # 进入等待更新
             self.in_flag = False  # 退出key为True
@@ -132,8 +141,6 @@ class Application(Frame):
         self.mist_state = IntVar(value=1)  # 迷雾标志
         self.color = (255, 51, 0)  # 绘制颜色
         ###
-        self.lobby_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                    + 0x3C78BC8, offsets=[0xb8, 0x8])
         self.inGame = False  # 是否在游戏
         ###
         ttk.Separator(self.master, orient=HORIZONTAL).place(x=0, y=19, relwidth=150)
@@ -142,9 +149,6 @@ class Application(Frame):
         self.btn_label = Label(self.master, text="▼", font=("Arial",12),background="white")
         self.btn_label.place(x=120, y=-5)
         self.btn_label.bind("<Button-1>", self.Stretch)
-        Button(self.master, text="TP", width=8, command=self.TP, bg="white").place(x=80, y=168)
-        self.combobox = ttk.Combobox(self.master, state="readonly", width=7, postcommand=self.ChangeCombobox)
-        self.combobox.place(x=1, y=173)
         Checkbutton(
             self.master, text="无迷雾", background="white", activebackground="white", font=("Arial", 10),
             onvalue=0, offvalue=1, variable=self.mist_state, command=self.Mist).place(x=0, y=20)
@@ -167,7 +171,7 @@ class Application(Frame):
 
     def Stretch(self, events):
         if self.master.winfo_height() == 20:
-            self.master.geometry('150x200+100+100')
+            self.master.geometry('150x170+100+100')
         else:
             self.master.geometry('150x20+100+100')
 
@@ -198,16 +202,6 @@ class Application(Frame):
         #     # 读内存比写内存占用小
         #     if wintool.Game.read_float(cd_addr) != 0:
         #         wintool.Game.write_float(cd_addr, 0.0)
-
-    def ChangeCombobox(self):
-        """
-        func: 动态改变combobox内容
-        :return:
-        """
-        name_list = []
-        for i in self.player_list:
-            if i.valid: name_list.append(i.nickname)
-        self.combobox['value'] = name_list
 
     def _Destory(self):
         """
@@ -287,36 +281,26 @@ class Application(Frame):
         """
         return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
-    def TP(self):
-        """
-        func: 传送
-        :return:
-        """
-        x_addr = self.player_list[0].Unity_addr
-        y_addr = self.player_list[0].Unity_addr + 0x4
-        wintool.Game.write_float(x_addr, self.player_list[int(self.combobox.current())].x)
-        wintool.Game.write_float(y_addr, self.player_list[int(self.combobox.current())].y)
-
     def Through(self):
         """
         func: 穿墙
         :return:
         """
-        try:
-            through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+        #try:
+        through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
                                                           + 0x3CA6AC0,
                                                           offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
 
-            wintool.Game.write_int(through_addr, self.through_state.get())
-        except:
-            messagebox.showerror(message="请检查是否进入游戏")
-            self.through_state.set(1)
+        wintool.Game.write_int(through_addr, self.through_state.get())
+        # except:
+        #     messagebox.showerror(message="请检查是否进入游戏")
+        #     self.through_state.set(1)
 
     def ChangeSpeed(self, value):
         speed_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
                                                     + 0x3C79808,
                                                     offsets=[0xb8, 0x0, 0x0, 0xb8, 0x10])
-        print(self.speed.get())
+        #print(self.speed.get())
         wintool.Game.write_float(speed_addr, self.speed.get())
 
     def Pygame_Thread(self):
@@ -336,17 +320,25 @@ class Application(Frame):
 
     def Monitor_Thread(self):
         while True:
+            try:
+                self.lobby_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                    + 0x3C78BC8, offsets=[0xb8, 0x8])
+                break
+            except pymem.exception.WinAPIError:
+                time.sleep(2)
+
+        while True:
             state = wintool.Game.read_int(self.lobby_addr)
             if state and not self.inGame:  # 刚刚进房间
                 self.inGame = True
                 self.Reset()
-                print("游戏开始")
+                #print("游戏开始")
             elif not state and self.inGame:  # 刚刚退出
                 self.inGame = False
                 self.record_state.set(False)
                 self.draw_state.set(False)
                 self.player_list = []
-                print("游戏结束")
+                #print("游戏结束")
             time.sleep(4)
 
     def Reset(self):

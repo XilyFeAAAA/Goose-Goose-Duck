@@ -25,7 +25,6 @@ class ExecDraw():
         pygame.display.set_caption('D3Gui')
         left, top, right, bottom = GetWinRect(self.firstHwnd)
         self.Width, self.Height = right - left, bottom - top
-        print(f"{self.Width} {self.Height}")
         self.screen = pygame.display.set_mode([self.Width, self.Height], pygame.NOFRAME)
         self.hwnd = FindWindowPid('pygame', 'D3Gui')[0]
         win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, left, top, self.Width, self.Height, win32con.SWP_NOSIZE)
