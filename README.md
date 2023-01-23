@@ -1,6 +1,6 @@
 # Goose Goose Duck Cheat
 
-鹅鸭杀辅助，大伙可以点个Star，功能在持续更新。
+鹅鸭杀辅助。最近比较忙暂时不更新，可以去看其他更好的Github项目
 
 # Release版本
 
