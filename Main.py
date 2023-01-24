@@ -38,7 +38,7 @@ class Player:
                                                     + 0x01ACA7C0, offsets=[0x48, 0x370, 0x10, 0x60, 0x2C])
         try:
             self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3CA6AC0, offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
+                                                           + 0x3C98478, offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         except:
             self.GameAssembly_addr = 0
         self.valid = False  # 是否有效
@@ -65,7 +65,7 @@ class Player:
         """
         time.sleep(5)
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3CA6AC0,
+                                                           + 0x3C98478,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         if app.inGame: self.Update()
 
@@ -77,8 +77,8 @@ class Player:
         name = ""
         try:
             nickname_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                      + 0x3CA6AC0,
-                                                      offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0x1D0,
+                                                      + 0x3C98478,
+                                                      offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0x1E0,
                                                                0])
             lens = wintool.Game.read_int(nickname_addr + 0x10)
             name_hex = wintool.Game.read_bytes(nickname_addr + 0x14, 2 * lens).hex()
@@ -97,14 +97,13 @@ class Player:
         :return:
         """
         try:
-            self.x = wintool.Game.read_float(self.GameAssembly_addr + 0x2C8)
-            self.y = wintool.Game.read_float(self.GameAssembly_addr + 0x2C8 + 0x4)
-            self.eaten = wintool.Game.read_int(self.GameAssembly_addr + 0x394)
-            self.isGhost = wintool.Game.read_int(self.GameAssembly_addr + 0x188)
-            self.isInfected = wintool.Game.read_int(self.GameAssembly_addr + 0xC3)
-            self.isSpectator = wintool.Game.read_int(self.GameAssembly_addr + 0x37A)
-            self.killRound = wintool.Game.read_int(self.GameAssembly_addr + 0x2EC)
-            self.has_Bomb = wintool.Game.read_int(self.GameAssembly_addr + 0x134)
+            self.x = wintool.Game.read_float(self.GameAssembly_addr + 0x2D8)
+            self.y = wintool.Game.read_float(self.GameAssembly_addr + 0x2D8 + 0x4)
+            self.eaten = wintool.Game.read_int(self.GameAssembly_addr + 0x404)
+            self.isGhost = wintool.Game.read_int(self.GameAssembly_addr + 0x198)
+            self.isInfected = wintool.Game.read_int(self.GameAssembly_addr + 0xD3)
+            self.isSpectator = wintool.Game.read_int(self.GameAssembly_addr + 0x38A)
+            self.has_Bomb = wintool.Game.read_int(self.GameAssembly_addr + 0x144)
             self.valid = True
             self.wait_update = False
             if not self.in_flag:  # key为真，则刚刚加入，初始化名字
@@ -182,8 +181,8 @@ class Application(Frame):
         """
         try:
             mist_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                       + 0x3CA6AC0,
-                                                       offsets=[0xb8, 0x20, 0x18, 0x30, 0x379])
+                                                       + 0x3C98478,
+                                                       offsets=[0xb8, 0x20, 0x18, 0x30, 0x389])
             wintool.Game.write_int(mist_addr, self.mist_state.get())
         except:
             messagebox.showerror(message="请检查是否进入游戏")
@@ -286,19 +285,19 @@ class Application(Frame):
         func: 穿墙
         :return:
         """
-        #try:
-        through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                          + 0x3CA6AC0,
+        try:
+            through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                          + 0x3C98478,
                                                           offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
 
-        wintool.Game.write_int(through_addr, self.through_state.get())
-        # except:
-        #     messagebox.showerror(message="请检查是否进入游戏")
-        #     self.through_state.set(1)
+            wintool.Game.write_int(through_addr, self.through_state.get())
+        except:
+            messagebox.showerror(message="请检查是否进入游戏")
+            self.through_state.set(1)
 
     def ChangeSpeed(self, value):
         speed_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                    + 0x3C79808,
+                                                    + 0x3C6B510,
                                                     offsets=[0xb8, 0x0, 0x0, 0xb8, 0x10])
         #print(self.speed.get())
         wintool.Game.write_float(speed_addr, self.speed.get())
@@ -321,15 +320,15 @@ class Application(Frame):
     def Monitor_Thread(self):
         while True:
             try:
-                self.lobby_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                    + 0x3C78BC8, offsets=[0xb8, 0x8])
+                self.isPlayerRoleSet = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
+                                                           + 0x3C98478, offsets=[0xb8, 0x20, 0x18, 0x30, 0x100])
                 break
             except pymem.exception.WinAPIError:
                 time.sleep(2)
 
         while True:
-            state = wintool.Game.read_int(self.lobby_addr)
-            if state and not self.inGame:  # 刚刚进房间
+            state = wintool.Game.read_int(self.isPlayerRoleSet)
+            if state and not self.inGame:  # 刚刚进游戏
                 self.inGame = True
                 self.Reset()
                 #print("游戏开始")
