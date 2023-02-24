@@ -38,7 +38,7 @@ class Player:
                                                     + 0x01ACA7C0, offsets=[0x48, 0x370, 0x10, 0x60, 0x2C])
         try:
             self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3C98478, offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
+                                                           + 0x4D4EAF0, offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         except:
             self.GameAssembly_addr = 0
         self.valid = False  # 是否有效
@@ -65,7 +65,7 @@ class Player:
         """
         time.sleep(5)
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3C98478,
+                                                           + 0x4D4EAF0,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         if app.inGame: self.Update()
 
@@ -77,7 +77,7 @@ class Player:
         name = ""
         try:
             nickname_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                      + 0x3C98478,
+                                                      + 0x4D4EAF0,
                                                       offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0x1E0,
                                                                0])
             lens = wintool.Game.read_int(nickname_addr + 0x10)
@@ -110,7 +110,7 @@ class Player:
                 self.GetNickName()
                 self.in_flag = True
                 #print(f"用户{self.nickname} 加入")
-            #print(f"序号:{self.player_num} 名字{self.nickname} 幽灵{self.isGhost} 旁观{self.isSpectator} 杀人{self.killRound}\n x{self.x} y{self.y}")
+            # print(f"序号:{self.player_num} 名字{self.nickname} 幽灵{self.isGhost} 旁观{self.isSpectator} 杀人{self.killRound}\n x{self.x} y{self.y}")
         except pymem.exception.MemoryReadError:
             #print(f"玩家{self.player_num}搜索错误，4秒后重新加载")
             self.valid = False
@@ -164,7 +164,7 @@ class Application(Frame):
         Checkbutton(
             self.master, text="穿墙", background="white", activebackground="white", font=("Arial", 10),
             onvalue=0, offvalue=1, variable=self.through_state, command=self.Through).place(x=0, y=100)
-        threading.Thread(target=self.Monitor_Thread, daemon=True).start()  # 开始监控线程
+        #threading.Thread(target=self.Monitor_Thread, daemon=True).start()  # 开始监控线程
         threading.Thread(target=self.Pygame_Thread, daemon=True).start()  # 开始PyGame线程
         self.listen_key_nblock()  # 开始键盘监听
 
@@ -181,7 +181,7 @@ class Application(Frame):
         """
         try:
             mist_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                       + 0x3C98478,
+                                                       + 0x4D4EAF0,
                                                        offsets=[0xb8, 0x20, 0x18, 0x30, 0x389])
             wintool.Game.write_int(mist_addr, self.mist_state.get())
         except:
@@ -266,10 +266,10 @@ class Application(Frame):
                     distance_list.sort(key=lambda x: x[0])
                     self.board.append(
                         f"玩家:{i.nickname}被吃, 附近有{distance_list[0][1]}{round(distance_list[0][0], 2)}米")
-                elif i.isInfected and not i.infect_flag:  # 刚刚被感染
-                    self.infect_num += 1
-                    self.board.append(f"玩家:{i.nickname}被感染，总计{self.infect_num}人")
-                    i.infect_flag = True
+                # elif i.isInfected and not i.infect_flag:  # 刚刚被感染
+                #     self.infect_num += 1
+                #     self.board.append(f"玩家:{i.nickname}被感染，总计{self.infect_num}人")
+                #     i.infect_flag = True
         for i in range(len(self.board)):
             self.draw.drawText(self.board[i], 14, 0, i * 18 + 100, (255, 255, 0))
 
@@ -287,7 +287,7 @@ class Application(Frame):
         """
         try:
             through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                          + 0x3C98478,
+                                                          + 0x4D4EAF0,
                                                           offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
 
             wintool.Game.write_int(through_addr, self.through_state.get())
@@ -297,7 +297,7 @@ class Application(Frame):
 
     def ChangeSpeed(self, value):
         speed_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                    + 0x3C6B510,
+                                                    + 0x3C54E28,
                                                     offsets=[0xb8, 0x0, 0x0, 0xb8, 0x10])
         #print(self.speed.get())
         wintool.Game.write_float(speed_addr, self.speed.get())
@@ -307,6 +307,8 @@ class Application(Frame):
         func: pygame主循环
         :return:
         """
+        self.inGame = True
+        self.Reset()
         while True:
             for player in self.player_list:
                 if not player.wait_update:
@@ -321,7 +323,7 @@ class Application(Frame):
         while True:
             try:
                 self.isPlayerRoleSet = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x3C98478, offsets=[0xb8, 0x20, 0x18, 0x30, 0x100])
+                                                           + 0x4D4EAF0, offsets=[0xb8, 0x20, 0x18, 0x30, 0x100])
                 break
             except pymem.exception.WinAPIError:
                 time.sleep(2)
