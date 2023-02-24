@@ -38,7 +38,7 @@ class Player:
                                                     + 0x01ACA7C0, offsets=[0x48, 0x370, 0x10, 0x60, 0x2C])
         try:
             self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x4D4EAF0, offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
+                                                           + 0x4CACA28, offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         except:
             self.GameAssembly_addr = 0
         self.valid = False  # 是否有效
@@ -65,7 +65,7 @@ class Player:
         """
         time.sleep(5)
         self.GameAssembly_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x4D4EAF0,
+                                                           + 0x4CACA28,
                                                            offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0])
         if app.inGame: self.Update()
 
@@ -77,7 +77,7 @@ class Player:
         name = ""
         try:
             nickname_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                      + 0x4D4EAF0,
+                                                      + 0x4CACA28,
                                                       offsets=[0xb8, 0x20, 0x18, 0x30 + self.player_num * 0x18, 0x1E0,
                                                                0])
             lens = wintool.Game.read_int(nickname_addr + 0x10)
@@ -181,7 +181,7 @@ class Application(Frame):
         """
         try:
             mist_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                       + 0x4D4EAF0,
+                                                       + 0x4CACA28,
                                                        offsets=[0xb8, 0x20, 0x18, 0x30, 0x389])
             wintool.Game.write_int(mist_addr, self.mist_state.get())
         except:
@@ -287,7 +287,7 @@ class Application(Frame):
         """
         try:
             through_addr = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                          + 0x4D4EAF0,
+                                                          + 0x4CACA28,
                                                           offsets=[0xb8, 0x20, 0x18, 0x30, 0xa8, 0x30, 0x39])
 
             wintool.Game.write_int(through_addr, self.through_state.get())
@@ -323,7 +323,7 @@ class Application(Frame):
         while True:
             try:
                 self.isPlayerRoleSet = wintool.GetPointerAddress(wintool.Get_moduladdr('GameAssembly.dll')
-                                                           + 0x4D4EAF0, offsets=[0xb8, 0x20, 0x18, 0x30, 0x100])
+                                                           + 0x4CACA28, offsets=[0xb8, 0x20, 0x18, 0x30, 0x100])
                 break
             except pymem.exception.WinAPIError:
                 time.sleep(2)
